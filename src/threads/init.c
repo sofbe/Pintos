@@ -405,3 +405,7 @@ print_stats (void)
   exception_print_stats ();
 #endif
 }
+
+void halt (void){
+    
+}
