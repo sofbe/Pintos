@@ -1,8 +1,13 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <file.h>
+#include <filesys.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
+
 
 static void syscall_handler (struct intr_frame *);
 
@@ -16,14 +21,18 @@ static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
     printf ("system call!\n");
-    printf("1 - Halt\n");
-    printf("2 - \n");
-    printf("3 - \n");
-    printf("4 - \n");
-    scanf("%d", &opt);
-    switch (opt)
-        case 1: halt();
-        case 2:
+    int sys_nr = *(int*)(f->esp);
+    switch (sys_nr)
+        case (SYS_HALT) {
+                    halt();
+                    break;
+            }
+        case (SYS_CREATE) {
+                    f->eax = create(.....)
+            }
+        case (SYS_EXIT){
+
+    }
 
 
 
@@ -35,12 +44,17 @@ void halt(void) {
 }
 
 bool create (const char*file, unsigned initialsize){
-
+    file = file->esp+4;
+    initialsize = initialsize->esp+8;
+    return filesys_create(file, initialsize);
 }
 
 int open(const char *file){
-
+    int index = thread_current()->position; //om vi vill komma åt fil 7 ska vi skicka in 7 här på något sätt för att komma åt plats 7 i arrayen *fds.
+    file_read_at(file); //används för att läsa in, Vill typ ha file->pos.
+    filesys_open(file);
 }
+
 void close (int fd){
 
 }

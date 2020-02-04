@@ -95,6 +95,8 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+    struct file *fds[130];              //skapat en array med 130 platser, 128 + en 1 och 0.
+    int position;
 #endif
 
     /* Owned by thread.c. */
