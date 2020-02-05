@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#define MAX_SIZE = 130;
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -95,8 +96,7 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-    struct file *fds[130];              //skapat en array med 130 platser, 128 + en 1 och 0.
-    int position;
+    struct file *fds[MAX_SIZE];              //skapat en array med 130 platser, 128 + en 1 och 0.
 #endif
 
     /* Owned by thread.c. */

@@ -436,6 +436,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+    for(int i = 0; i < MAX_SIZE; i++){
+      t->fds[i] = NULL;
+  }
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
