@@ -437,7 +437,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-    for(int i = 0; i < MAX_SIZE; i++){
+    for(int i = 2; i < MAX_SIZE; i++){
       t->fds[i] = NULL;
   }
 }

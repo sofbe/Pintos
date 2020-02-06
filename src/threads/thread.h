@@ -4,7 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#define MAX_SIZE = 130;
+#define MAX_SIZE 130
 
 /* States in a thread's life cycle. */
 enum thread_status

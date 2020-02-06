@@ -406,6 +406,3 @@ print_stats (void)
 #endif
 }
 
-void halt (void){
-    
-}
