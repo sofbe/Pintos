@@ -67,6 +67,7 @@ int read(int fd, void *buffer, unsigned size){
     int bytes;
 
     if (fd == STDIN_FILENO){
+        printf("entered first if \n");
         for(unsigned i = 0; i < size; i++) {
             *((uint8_t*)buffer) = input_getc();
             buffer++;
@@ -74,16 +75,20 @@ int read(int fd, void *buffer, unsigned size){
         return size;
     }
     else if(fd > STDOUT_FILENO && fd < 131){
+        printf("entered else if \n");
         struct file *file = thread->fds[fd];
         if(file != NULL) {
+            printf("else if if \n");
             bytes = file_read(file, buffer, size);
             return bytes;
         }
         else{
+            printf("else if else\n");
             return -1;
         }
     }
     else{
+        printf("entered else\n");
         return -1;
     }
 
@@ -134,7 +139,7 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         }
         case (SYS_OPEN): {
-            (f->eax) = open(*((char**)f->esp+4));
+            (f->eax) = open(*((char**)(f->esp+4)));
             break;
         }
         case (SYS_EXIT): {
@@ -151,7 +156,7 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         }
         case (SYS_READ): {
-            (f->eax) = read(*((int*)f->esp+4), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
+            (f->eax) = read(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
             break;
         }
     }
