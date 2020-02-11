@@ -275,9 +275,16 @@ void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
-
+  struct thread *thread = thread_current();
 #ifdef USERPROG
   process_exit ();
+
+  for(int i = 2; i <130; i++){
+      if(thread->fds[i] != NULL){
+          file_close(thread->fds[i]);
+      }
+  }
+
 #endif
 
   /* Just set our status to dying and schedule another process.
