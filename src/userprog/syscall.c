@@ -19,7 +19,7 @@ syscall_init (void)
 void halt(void) {
     power_off();
 }
-hh
+
 bool create (const char*file, unsigned initialsize){
     return filesys_create(file, initialsize);
 }

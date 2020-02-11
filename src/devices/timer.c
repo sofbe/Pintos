@@ -3,10 +3,13 @@
 #include <inttypes.h>
 #include <round.h>
 #include <stdio.h>
+#include <thread.h>
+#include <synch.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "lib/kernel/list.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -96,11 +99,32 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
+    if (ticks == NULL){
+        return;
+    }
+     int64_t start = timer_ticks ();
+     struct semaphore *s;
+
+     s->waiters = thread ... //lägga till i lista nmed väntande trådar
+
+    struct list thread_list;
+    list_init (&thread_list);
+    struct thread *thread = thread_current();
+    struct list_elem element = thread->elem;
+
+    list_push_back(thread_list, element);
+
+    sema_init(&s, 0);
+
+
+
+  }
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  while (timer_elapsed (start) < ticks) {
+
+  }
+
 }
 
 /* Suspends execution for approximately MS milliseconds. */
