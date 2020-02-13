@@ -23,6 +23,7 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
+
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -102,30 +103,33 @@ timer_sleep (int64_t ticks)
     if (ticks == NULL){
         return;
     }
-     int64_t start = timer_ticks ();
-     struct semaphore *s;
+    int64_t start = timer_ticks ();
+    int64_t totalTicks = start + ticks;
+    thread_sleep(totalTicks);
 
-     s->waiters = thread ... //lägga till i lista nmed väntande trådar
+   /* // struct semaphore *s; vi gör detta i init_thread istället!
+     struct thread *thread = thread_current();
 
-    struct list thread_list;
-    list_init (&thread_list);
-    struct thread *thread = thread_current();
-    struct list_elem element = thread->elem;
-
-    list_push_back(thread_list, element);
-
-    sema_init(&s, 0);
+     thread->ticks = totalTicks;
+     list_push_back (&waiting_list, &thread->elem); //hur kommer vi åt denna lista?
+     thread_block();
 
 
+
+
+
+    struct list_elem *e;
+
+    for (e = list_begin (&waiting_list); e != list_end (&waiting_list); e = list_next (e)){
+         struct thread *currentThread = list_entry (e,  struct thread, elem);
+         if(currentThread->ticks == start) { // här vill vi komma åt elem thread där thread också har ett antal ticks
+            thread_unblock(currentThread);
+            return;
+         }
+     }*/
 
   }
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) {
-
-  }
-
-}
 
 /* Suspends execution for approximately MS milliseconds. */
 void
