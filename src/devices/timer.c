@@ -100,16 +100,15 @@ void
 timer_sleep (int64_t ticks) 
 {
     ASSERT(intr_get_level() == INTR_ON);
-    if (ticks == 0){
-        return;
-    }
+
+    intr_set_level(INTR_OFF);
     int64_t start = timer_ticks ();
     int64_t totalTicks = start + ticks;
     struct thread *thread = thread_current();
     thread->ticks = totalTicks;
 
+
     list_push_back(&waiting_list, &thread->element);
-    intr_set_level(INTR_OFF);
     thread_block();
     intr_set_level(INTR_ON);
 
@@ -117,7 +116,7 @@ timer_sleep (int64_t ticks)
 
 void timer_wakeUp() {
     struct list_elem *e;
-
+    enum intr_level currentLevel = intr_get_level();
     if (!list_empty(&waiting_list)) {
         for (e = list_begin (&waiting_list); e != list_end (&waiting_list);){
             struct thread *currentThread = list_entry(e, struct thread, element);
@@ -130,6 +129,7 @@ void timer_wakeUp() {
             }
         }
     }
+    intr_set_level(currentLevel);
 }
 
 /* Suspends execution for approximately MS milliseconds. */

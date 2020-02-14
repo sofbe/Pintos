@@ -30,6 +30,7 @@ int open(const char *file){
     bool filePlaced = false;
     for(int i = 2; i < 130; i++ ){
         if(thread->fds[i] == NULL){
+
             if(filesys_open(file) != NULL ) {
                 thread->fds[i] = filesys_open(file);
                 filePlaced = true;
@@ -47,6 +48,7 @@ int open(const char *file){
 }
 
 void close(int fd){
+    ASSERT(fd > -1 && fd < 131);
     struct thread *thread = thread_current();
     struct file *file = thread->fds[fd];
 
@@ -60,9 +62,9 @@ int read(int fd, void *buffer, unsigned size){
     int bytes;
 
     if (fd == STDIN_FILENO){
-        printf("entered first if \n");
         for(unsigned i = 0; i < size; i++) {
             *((uint8_t*)buffer) = input_getc();
+            buffer[i]
             buffer++;
         }
         return size;
