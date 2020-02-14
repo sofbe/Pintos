@@ -89,10 +89,11 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int64_t ticks;
+    struct list_elem element;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    int64_t ticks;
 
 
 #ifdef USERPROG
@@ -104,14 +105,17 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
+#ifdef USERPROG
+struct sleepThread {
+     int64_t ticks;
+     struct list_elem element;
+};
+#endif
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-//our methods
-void thread_sleep(int64_t ticks);
-void thread_wakeUp();
+
 
 void thread_init (void);
 void thread_start (void);

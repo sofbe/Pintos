@@ -12,6 +12,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "thread.h"
+#include "devices/timer.h"
 
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -25,7 +26,6 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
-static struct list waiting_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -121,7 +121,6 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
-
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -133,10 +132,12 @@ thread_tick (void)
     kernel_ticks++;
 
   /* Enforce preemption. */
-  if (++thread_ticks >= TIME_SLICE)
+  if (++thread_ticks >= TIME_SLICE){
     intr_yield_on_return ();
+    }
 
-    thread_wakeUp();
+  //thread_wakeUp();
+
 }
 
 /* Prints thread statistics. */
@@ -300,24 +301,6 @@ thread_exit (void)
   NOT_REACHED ();
 }
 
-void thread_sleep(int64_t ticks){
-    struct thread *thread = thread_current();
-    thread->ticks = ticks;
-    list_push_back (&waiting_list, &thread->elem); //hur kommer vi åt denna lista?
-    thread_block();
-}
-
-void thread_wakeUp(){
-    struct list_elem *e;
-    for (e = list_begin (&waiting_list); e != list_end (&waiting_list); e = list_next (e)){
-        struct thread *currentThread = list_entry (e,  struct thread, elem);
-        if(currentThread->ticks == thread_ticks) { // här vill vi komma åt elem thread där thread också har ett antal ticks
-            thread_unblock(currentThread);
-            return;
-        }
-    }
-}
-
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
 void
@@ -466,11 +449,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-
+#ifdef USERPROG
     for(int i = 2; i < MAX_SIZE; i++){
       t->fds[i] = NULL;
   }
-    struct semaphore *s;
+#endif
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

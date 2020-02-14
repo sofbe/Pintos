@@ -3,8 +3,6 @@
 #include <inttypes.h>
 #include <round.h>
 #include <stdio.h>
-#include <thread.h>
-#include <synch.h>
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/synch.h"
@@ -22,7 +20,7 @@
 
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
-
+static struct list waiting_list;
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
@@ -39,6 +37,7 @@ static void real_time_sleep (int64_t num, int32_t denom);
 void
 timer_init (void) 
 {
+    list_init(&waiting_list);
   /* 8254 input frequency divided by TIMER_FREQ, rounded to
      nearest. */
   uint16_t count = (1193180 + TIMER_FREQ / 2) / TIMER_FREQ;
@@ -100,36 +99,38 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-    if (ticks == NULL){
+    ASSERT(intr_get_level() == INTR_ON);
+    if (ticks == 0){
         return;
     }
     int64_t start = timer_ticks ();
     int64_t totalTicks = start + ticks;
-    thread_sleep(totalTicks);
+    struct thread *thread = thread_current();
+    thread->ticks = totalTicks;
 
-   /* // struct semaphore *s; vi gör detta i init_thread istället!
-     struct thread *thread = thread_current();
-
-     thread->ticks = totalTicks;
-     list_push_back (&waiting_list, &thread->elem); //hur kommer vi åt denna lista?
-     thread_block();
-
-
-
-
-
-    struct list_elem *e;
-
-    for (e = list_begin (&waiting_list); e != list_end (&waiting_list); e = list_next (e)){
-         struct thread *currentThread = list_entry (e,  struct thread, elem);
-         if(currentThread->ticks == start) { // här vill vi komma åt elem thread där thread också har ett antal ticks
-            thread_unblock(currentThread);
-            return;
-         }
-     }*/
+    list_push_back(&waiting_list, &thread->element);
+    intr_set_level(INTR_OFF);
+    thread_block();
+    intr_set_level(INTR_ON);
 
   }
 
+void timer_wakeUp() {
+    struct list_elem *e;
+
+    if (!list_empty(&waiting_list)) {
+        for (e = list_begin (&waiting_list); e != list_end (&waiting_list);){
+            struct thread *currentThread = list_entry(e, struct thread, element);
+            if (currentThread->ticks <= timer_ticks()) {
+                thread_unblock(currentThread);
+                e = list_remove(e);
+            }
+            else{
+                e = list_next(e);
+            }
+        }
+    }
+}
 
 /* Suspends execution for approximately MS milliseconds. */
 void
@@ -140,7 +141,7 @@ timer_msleep (int64_t ms)
 
 /* Suspends execution for approximately US microseconds. */
 void
-timer_usleep (int64_t us) 
+timer_usleep (int64_t us)
 {
   real_time_sleep (us, 1000 * 1000);
 }
@@ -165,6 +166,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  timer_wakeUp();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
