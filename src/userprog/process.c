@@ -39,6 +39,13 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
+
+  struct thread *parent = thread_current();
+  struct parent_child *pc = (struct parent_child*)malloc(sizeof(struct parent_child));
+
+  pc->alive_count = 2;
+  sema_init(&pc->, 0);
+
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
@@ -100,6 +107,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

@@ -91,6 +91,7 @@ struct thread
     int priority;                       /* Priority. */
     int64_t ticks;
     struct list_elem element;
+    struct parent_child *pChild;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -105,12 +106,17 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+
 #ifdef USERPROG
-struct sleepThread {
-     int64_t ticks;
-     struct list_elem element;
+struct parent_child{
+    int exit_status;
+    int alive_count;
+    struct semaphore *sema;
 };
+
 #endif
+
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
