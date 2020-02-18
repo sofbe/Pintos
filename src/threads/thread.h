@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 #define MAX_SIZE 130
 
 /* States in a thread's life cycle. */
@@ -95,6 +96,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    struct list children_list;
 
 
 #ifdef USERPROG
@@ -112,7 +114,10 @@ struct thread
 struct parent_child{
     int exit_status;
     int alive_count;
-    struct semaphore *sema;
+    struct semaphore s;
+    char *fn_copyInfo;
+    tid_t child_id;
+    struct list_elem child_elem;
 };
 
 #endif

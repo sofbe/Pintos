@@ -1,8 +1,9 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
-#include <interrupt.h>
-#include <thread.h>
+//#include <interrupt.h>
+//#include <thread.h>
+#include <user/syscall.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "filesys/filesys.h"
@@ -106,15 +107,6 @@ int write(int fd, const void *buffer, unsigned size){
 }
 
 void exit(int status){
-
-    struct thread *thread = thread_current();
-    thread->pChild->exit_status = status;
-    int count = thread->pChild->alive_count;
-    thread->pChild->alive_count = (count-1);
-
-    if(thread->pChild->alive_count == 0){
-        free
-    }
     thread_exit();
 
 }
@@ -163,7 +155,7 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         }
         case (SYS_EXEC): {
-            (f->eax) = exec(*((char**)(f->esp+4));
+            (f->eax) = exec(*((char**)(f->esp+4)));
             break;
         }
     }

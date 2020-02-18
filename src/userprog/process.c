@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+//#include <thread.h>
+//#include <synch.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -15,8 +17,11 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
+#include "lib/kernel/list.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -38,18 +43,32 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+
   /* Create a new thread to execute FILE_NAME. */
 
   struct thread *parent = thread_current();
-  struct parent_child *pc = (struct parent_child*)malloc(sizeof(struct parent_child));
-
+    printf("Parent ID: %d\n", parent->tid);
+    struct parent_child *pc = ((struct parent_child*)malloc(sizeof(struct parent_child)));
+  //parent->pChild = pc;
   pc->alive_count = 2;
-  sema_init(&pc->, 0);
+  pc->fn_copyInfo = fn_copy;
 
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
-  return tid;
+  sema_init(&(pc->s), 0); //vi sätter stopp för parent medan child jobbar.
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, pc);
+    sema_down(&(pc->s));
+
+  if (tid == TID_ERROR) {
+     printf("hej");
+      palloc_free_page(fn_copy);
+      return -1;
+  }
+  else{
+      printf("Child id: %d\n", tid);
+      pc->child_id = tid;
+      list_push_back(&(parent->children_list), &(pc->child_elem));
+      //sema_up(&pc->s);
+        return tid;
+    }
 }
 
 /* A thread function that loads a user process and starts it
@@ -57,7 +76,10 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  char *file_name = file_name_;
+    struct parent_child *pc = (struct parent_child*)file_name_;
+    thread_current()->pChild = pc;
+    char *file_name = pc->fn_copyInfo;
+  //char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
 
@@ -68,11 +90,14 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
-
+  else{
+      sema_up(&(pc->s));
+    }
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -103,15 +128,45 @@ process_wait (tid_t child_tid UNUSED)
 
 /* Free the current process's resources. */
 void
-process_exit (void)
-{
-  struct thread *cur = thread_current ();
-  uint32_t *pd;
+process_exit (void) {
+    struct thread *thread = thread_current();
+    struct parent_child *pc = thread->pChild;
+    uint32_t *pd;
+
+    //pc->exit_status = status;
+
+    if (!list_empty(&(thread->children_list))) {
+        struct list_elem *e;
+        for (e = list_begin(&(thread->children_list)); e != list_end(&(thread->children_list));) {
+            struct parent_child *currentPc = list_entry(e, struct parent_child, child_elem);
+            currentPc->alive_count--;
+            if (currentPc->alive_count == 0) {
+                free(currentPc);
+            }
+        }
+    }
+    if (pc != NULL) { //om den har
+        int count = pc->alive_count;
+        pc->alive_count = (count - 1);
+        if (pc->alive_count == 0) {
+            free(pc);
+        }
+    }
+
+    /* if(list_empty(&(thread->children_list))){
+         int count = thread->pChild->alive_count;
+         thread->pChild->alive_count = (count-1);
+         if(thread->pChild->alive_count  == 0){
+             free(thread->pChild);
+         }
+     }*/
+
+
 
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
-  pd = cur->pagedir;
+  pd = thread->pagedir;
   if (pd != NULL) 
     {
       /* Correct ordering here is crucial.  We must set
@@ -121,7 +176,7 @@ process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
-      cur->pagedir = NULL;
+        thread->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
