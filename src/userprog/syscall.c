@@ -1,8 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
-//#include <interrupt.h>
-//#include <thread.h>
 #include <user/syscall.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -107,6 +105,10 @@ int write(int fd, const void *buffer, unsigned size){
 }
 
 void exit(int status){
+    struct thread *thread = thread_current();
+    printf("%s: exit(%d)\n", thread->name, status);
+
+    thread->pChild->exit_status = status;
     thread_exit();
 
 }

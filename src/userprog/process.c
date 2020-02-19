@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 //#include <thread.h>
+//#include <thread.h>
 //#include <synch.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
@@ -47,7 +48,7 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
 
   struct thread *parent = thread_current();
-    printf("Parent ID: %d\n", parent->tid);
+    //printf("Parent ID: %d\n", parent->tid);
     struct parent_child *pc = ((struct parent_child*)malloc(sizeof(struct parent_child)));
   //parent->pChild = pc;
   pc->alive_count = 2;
@@ -58,14 +59,16 @@ process_execute (const char *file_name)
     sema_down(&(pc->s));
 
   if (tid == TID_ERROR) {
-     printf("hej");
+     //printf("hej");
       palloc_free_page(fn_copy);
+     // pc->exit_status = -1;
       return -1;
   }
   else{
-      printf("Child id: %d\n", tid);
+     // printf("Child id: %d\n", tid);
       pc->child_id = tid;
       list_push_back(&(parent->children_list), &(pc->child_elem));
+     // pc->exit_status = 0;
       //sema_up(&pc->s);
         return tid;
     }
@@ -93,11 +96,10 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
+  sema_up(&(pc->s));
   if (!success) 
     thread_exit ();
-  else{
-      sema_up(&(pc->s));
-    }
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -133,35 +135,42 @@ process_exit (void) {
     struct parent_child *pc = thread->pChild;
     uint32_t *pd;
 
-    //pc->exit_status = status;
 
     if (!list_empty(&(thread->children_list))) {
         struct list_elem *e;
         for (e = list_begin(&(thread->children_list)); e != list_end(&(thread->children_list));) {
             struct parent_child *currentPc = list_entry(e, struct parent_child, child_elem);
-            currentPc->alive_count--;
+            //thread_block();
+            int count1 = currentPc->alive_count;
+            currentPc->alive_count = (count1 - 1);
+           // printf("alice_countcp: %d\n", currentPc->alive_count);
+
             if (currentPc->alive_count == 0) {
+                //printf("nu försöker vi free barnet %d\n",);
+                e = list_remove(e);
                 free(currentPc);
             }
+            else{
+                e = list_next(e);
+            }
+
+
+
+                //thread_unblock(thread);
+
         }
     }
     if (pc != NULL) { //om den har
+       // thread_block();
         int count = pc->alive_count;
         pc->alive_count = (count - 1);
+        //thread_unblock(thread);
+        //printf("alice_count: %d\n", pc->alive_count);
+
         if (pc->alive_count == 0) {
             free(pc);
         }
     }
-
-    /* if(list_empty(&(thread->children_list))){
-         int count = thread->pChild->alive_count;
-         thread->pChild->alive_count = (count-1);
-         if(thread->pChild->alive_count  == 0){
-             free(thread->pChild);
-         }
-     }*/
-
-
 
 
   /* Destroy the current process's page directory and switch back
