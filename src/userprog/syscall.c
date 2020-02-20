@@ -52,6 +52,7 @@ int open(const char *file){
 
 void close(int fd){
     ASSERT(fd > -1 && fd < 130);
+
     struct thread *thread = thread_current();
     struct file *file = thread->fds[fd];
 
