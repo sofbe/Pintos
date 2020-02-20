@@ -49,6 +49,7 @@ int open(const char *file){
 }
 
 void close(int fd){
+    ASSERT(fd > -1 && fd < 130);
     struct thread *thread = thread_current();
     struct file *file = thread->fds[fd];
 
@@ -67,7 +68,7 @@ int read(int fd, void *buffer, unsigned size){
                 buffer++;
             }
             return size;
-        } else if (fd > STDOUT_FILENO && fd < 131) {
+        } else if (fd > STDOUT_FILENO && fd < 130) {
             struct file *file = thread->fds[fd];
             if (file != NULL) {
                 bytes = file_read(file, buffer, size);
@@ -86,7 +87,7 @@ int read(int fd, void *buffer, unsigned size){
 int write(int fd, const void *buffer, unsigned size){
     struct thread *thread = thread_current();
 
-   ASSERT(fd > -1 && fd < 131);
+   ASSERT(fd > -1 && fd < 130);
 
    int bytes;
 
