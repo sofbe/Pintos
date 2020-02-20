@@ -106,9 +106,9 @@ int write(int fd, const void *buffer, unsigned size){
 
 void exit(int status){
     struct thread *thread = thread_current();
-    printf("%s: exit(%d)\n", thread->name, status);
-
     thread->pChild->exit_status = status;
+    printf("%s: exit(%d)\n", thread->name, thread->pChild->exit_status);
+
     thread_exit();
 
 }

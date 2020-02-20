@@ -115,8 +115,9 @@ struct parent_child{
     int exit_status;
     int alive_count;
     struct semaphore s;
+    struct lock l;
     char *fn_copyInfo;
-    tid_t child_id;
+    bool success;
     struct list_elem child_elem;
 };
 

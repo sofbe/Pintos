@@ -44,33 +44,29 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-
   /* Create a new thread to execute FILE_NAME. */
-
   struct thread *parent = thread_current();
-    //printf("Parent ID: %d\n", parent->tid);
-    struct parent_child *pc = ((struct parent_child*)malloc(sizeof(struct parent_child)));
-  //parent->pChild = pc;
+  struct parent_child *pc = ((struct parent_child*)malloc(sizeof(struct parent_child)));
   pc->alive_count = 2;
   pc->fn_copyInfo = fn_copy;
+  pc->success = true;
 
-  sema_init(&(pc->s), 0); //vi sätter stopp för parent medan child jobbar.
+  sema_init(&(pc->s), 0);
+  lock_init(&pc->l);
   tid = thread_create (file_name, PRI_DEFAULT, start_process, pc);
     sema_down(&(pc->s));
 
   if (tid == TID_ERROR) {
-     //printf("hej");
       palloc_free_page(fn_copy);
-     // pc->exit_status = -1;
+      return -1;
+  }
+  else if(!(pc->success)){
+      free(pc);
       return -1;
   }
   else{
-     // printf("Child id: %d\n", tid);
-      pc->child_id = tid;
       list_push_back(&(parent->children_list), &(pc->child_elem));
-     // pc->exit_status = 0;
-      //sema_up(&pc->s);
-        return tid;
+      return tid;
     }
 }
 
@@ -82,7 +78,6 @@ start_process (void *file_name_)
     struct parent_child *pc = (struct parent_child*)file_name_;
     thread_current()->pChild = pc;
     char *file_name = pc->fn_copyInfo;
-  //char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
 
@@ -97,9 +92,10 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name);
   sema_up(&(pc->s));
-  if (!success) 
-    thread_exit ();
-
+  if (!success) {
+    pc->success = false;
+      thread_exit();
+  }
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -135,40 +131,33 @@ process_exit (void) {
     struct parent_child *pc = thread->pChild;
     uint32_t *pd;
 
-
     if (!list_empty(&(thread->children_list))) {
         struct list_elem *e;
         for (e = list_begin(&(thread->children_list)); e != list_end(&(thread->children_list));) {
-            struct parent_child *currentPc = list_entry(e, struct parent_child, child_elem);
-            //thread_block();
-            int count1 = currentPc->alive_count;
-            currentPc->alive_count = (count1 - 1);
-           // printf("alice_countcp: %d\n", currentPc->alive_count);
+            struct parent_child *currentPc = list_entry(e,
+            struct parent_child, child_elem);
+            lock_acquire(&currentPc->l);
+            currentPc->alive_count--;
 
             if (currentPc->alive_count == 0) {
-                //printf("nu försöker vi free barnet %d\n",);
+                lock_release(&currentPc->l);
                 e = list_remove(e);
                 free(currentPc);
-            }
-            else{
+            } else {
+                lock_release(&currentPc->l);
                 e = list_next(e);
             }
-
-
-
-                //thread_unblock(thread);
-
         }
     }
-    if (pc != NULL) { //om den har
-       // thread_block();
-        int count = pc->alive_count;
-        pc->alive_count = (count - 1);
-        //thread_unblock(thread);
-        //printf("alice_count: %d\n", pc->alive_count);
-
+    if (pc != NULL) {
+        lock_acquire(&pc->l);
+        pc->alive_count--;
         if (pc->alive_count == 0) {
+            lock_release(&pc->l);
             free(pc);
+        }
+        else{
+            lock_release(&pc->l);
         }
     }
 
