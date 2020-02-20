@@ -28,12 +28,14 @@ bool create (const char*file, unsigned initialsize){
 
 int open(const char *file){
     int fdsNumber = 0;
+    struct file *f = filesys_open(file);
     struct thread *thread = thread_current();
     bool filePlaced = false;
     for(int i = 2; i < 130; i++ ){
         if(thread->fds[i] == NULL){
-            if(filesys_open(file) != NULL ) {
-                thread->fds[i] = filesys_open(file);
+            //struct file file = filesys_open(file);
+            if(f != NULL ) {
+                thread->fds[i] = f;
                 filePlaced = true;
                 fdsNumber = i;
                 break;
@@ -49,6 +51,7 @@ int open(const char *file){
 }
 
 void close(int fd){
+    ASSERT(fd > -1 && fd < 130);
     struct thread *thread = thread_current();
     struct file *file = thread->fds[fd];
 
@@ -61,47 +64,47 @@ int read(int fd, void *buffer, unsigned size){
 
     int bytes;
 
-    if (fd == STDIN_FILENO){
-        printf("entered first if \n");
-        for(unsigned i = 0; i < size; i++) {
-            *((uint8_t*)buffer) = input_getc();
-            buffer++;
+        if (fd == STDIN_FILENO) {
+            for (unsigned i = 0; i < size; i++) {
+                *((uint8_t *) buffer) = input_getc();
+                buffer++;
+            }
+            return size;
+        } else if (fd > STDOUT_FILENO && fd < 130) {
+            struct file *file = thread->fds[fd];
+            if (file != NULL) {
+                bytes = file_read(file, buffer, size);
+                return bytes;
+            }
+            else {
+                return -1;
+            }
         }
-        return size;
-    }
-    else if(fd > STDOUT_FILENO && fd < 131){
-        struct file *file = thread->fds[fd];
-        if(file != NULL) {
-            bytes = file_read(file, buffer, size);
-            return bytes;
-        }
-        else{
+        else {
             return -1;
         }
-    }
-    else{
-        return -1;
-    }
 
 }
 
 int write(int fd, const void *buffer, unsigned size){
     struct thread *thread = thread_current();
 
-   ASSERT(fd > -1 && fd < 131);
+   ASSERT(fd > -1 && fd < 130);
 
-    int bytes;
-    if (fd == STDOUT_FILENO){
-        putbuf(buffer, size);
-        return size;
-    }
-    else if(fd > STDOUT_FILENO){
-        bytes = file_write(thread->fds[fd], buffer, size);
-        return bytes;
-        }
-    else{
-        return -1;
-    }
+   int bytes;
+
+       if (fd == STDOUT_FILENO) {
+           putbuf(buffer, size);
+           return size;
+       } else if (fd > STDOUT_FILENO) {
+           if(thread->fds[fd] != NULL) {
+               bytes = file_write(thread->fds[fd], buffer, size);
+               return bytes;
+           }
+       } else {
+           return -1;
+       }
+
 }
 
 void exit(int status){
