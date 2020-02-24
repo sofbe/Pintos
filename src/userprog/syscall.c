@@ -49,12 +49,13 @@ int open(const char *file){
 }
 
 void close(int fd){
-    ASSERT(fd > -1 && fd < 130);
-    struct thread *thread = thread_current();
-    struct file *file = thread->fds[fd];
+    if(fd > -1 && fd < 130) {
+        struct thread *thread = thread_current();
+        struct file *file = thread->fds[fd];
 
-    file_close(file);
-    thread->fds[fd] = NULL;
+        file_close(file);
+        thread->fds[fd] = NULL;
+    }
 }
 
 int read(int fd, void *buffer, unsigned size){
@@ -87,21 +88,25 @@ int read(int fd, void *buffer, unsigned size){
 int write(int fd, const void *buffer, unsigned size){
     struct thread *thread = thread_current();
 
-   ASSERT(fd > -1 && fd < 130);
+    if(fd > -1 && fd < 130) {
 
-   int bytes;
+        int bytes;
 
-       if (fd == STDOUT_FILENO) {
-           putbuf(buffer, size);
-           return size;
-       } else if (fd > STDOUT_FILENO) {
-           if(thread->fds[fd] != NULL) {
-               bytes = file_write(thread->fds[fd], buffer, size);
-               return bytes;
-           }
-       } else {
-           return -1;
-       }
+        if (fd == STDOUT_FILENO) {
+            putbuf(buffer, size);
+            return size;
+        } else if (fd > STDOUT_FILENO) {
+            if (thread->fds[fd] != NULL) {
+                bytes = file_write(thread->fds[fd], buffer, size);
+                return bytes;
+            }
+        } else {
+            return -1;
+        }
+    }
+    else {
+        return -1;
+    }
 
 }
 
