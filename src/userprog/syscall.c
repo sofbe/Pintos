@@ -2,11 +2,13 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include <user/syscall.h>
+#include <thread.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "threads/synch.h"
+#include "lib/string.h"
 
 #define MAX_SIZE 130
 
@@ -118,7 +120,9 @@ void exit(int status){
 }
 
 pid_t exec (const char *cmd_file) {
+    struct thread *thread = thread_current();
     const char *file_name = cmd_file;
+    thread->new_s->file_n = file_name;
     pid_t pid;
     pid = process_execute(file_name);
     return pid;

@@ -534,13 +534,30 @@ setup_stack (void **esp)
 {
   uint8_t *kpage;
   bool success = false;
+  struct thread *thread = thread_current();
+
+    char args[32];
+    char *token;
+    char *save_ptr;
+    void *new_stack = *esp;
+    int argc;
+
+    for (token = strtok_r (thread->new_s->file_n, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
+        new_stack = //vill lägga det vi får ut av token, hur definerar vi platsen den ska läggas på i new_stack?
+        printf("'%s'\n", token);
+        argc++;
+        if(argc == 32){
+            break;
+        }
+    }
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
+  if (kpage != NULL)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE - 12;
+        *esp = PHYS_BASE;
       else
         palloc_free_page (kpage);
     }
