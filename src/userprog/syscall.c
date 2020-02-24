@@ -1,14 +1,10 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
-#include <user/syscall.h>
-#include <thread.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
-#include "threads/synch.h"
-#include "lib/string.h"
 
 #define MAX_SIZE 130
 
@@ -54,7 +50,6 @@ int open(const char *file){
 
 void close(int fd){
     ASSERT(fd > -1 && fd < 130);
-
     struct thread *thread = thread_current();
     struct file *file = thread->fds[fd];
 
@@ -111,21 +106,7 @@ int write(int fd, const void *buffer, unsigned size){
 }
 
 void exit(int status){
-    struct thread *thread = thread_current();
-    thread->pChild->exit_status = status;
-    printf("%s: exit(%d)\n", thread->name, thread->pChild->exit_status);
-
     thread_exit();
-
-}
-
-pid_t exec (const char *cmd_file) {
-    struct thread *thread = thread_current();
-    const char *file_name = cmd_file;
-    thread->new_s->file_n = file_name;
-    pid_t pid;
-    pid = process_execute(file_name);
-    return pid;
 
 }
 
@@ -162,10 +143,6 @@ syscall_handler (struct intr_frame *f UNUSED)
         }
         case (SYS_READ): {
             (f->eax) = read(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
-            break;
-        }
-        case (SYS_EXEC): {
-            (f->eax) = exec(*((char**)(f->esp+4)));
             break;
         }
     }
