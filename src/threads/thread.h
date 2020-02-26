@@ -97,7 +97,6 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list children_list;
-    struct stack *new_s;
 
 
 #ifdef USERPROG
@@ -124,11 +123,6 @@ struct parent_child{
 
 #endif
 
-#ifdef USERPROG
-struct stack{
-    char *file_n;
-};
-#endif
 
 
 /* If false (default), use round-robin scheduler.

@@ -259,7 +259,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -286,14 +286,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Set up stack. */
-  if (!setup_stack (esp)){
+  if (!setup_stack (esp, file_name)){
     goto done;
   }
 
    /* Uncomment the following line to print some debug
      information. This will be useful when you debug the program
      stack.*/
-/*#define STACK_DEBUG*/
+#define STACK_DEBUG
 
 #ifdef STACK_DEBUG
   printf("*esp is %p\nstack contents:\n", *esp);
@@ -530,35 +530,92 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, char *file_name)
 {
   uint8_t *kpage;
   bool success = false;
-  struct thread *thread = thread_current();
-
-    char args[32];
-    char *token;
-    char *save_ptr;
-    void *new_stack = *esp;
-    int argc;
-
-    for (token = strtok_r (thread->new_s->file_n, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
-        new_stack = //vill lägga det vi får ut av token, hur definerar vi platsen den ska läggas på i new_stack?
-        printf("'%s'\n", token);
-        argc++;
-        if(argc == 32){
-            break;
-        }
-    }
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL) 
   if (kpage != NULL)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
-        *esp = PHYS_BASE;
-      else
+      if (success) {
+          *esp = PHYS_BASE;
+
+          char *argv[32];
+          char *token;
+          char *save_ptr;
+          void *new_stack = *esp;
+          int argc = 0;
+          uint8_t time = NULL;
+          size_t newSize = 0;
+          char **curr;
+          char ***argvcurr;
+          void *fake_return = NULL;
+
+          for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
+            //  printf("'%s'\n", token);
+            //  printf("newstack init'%d'\n", new_stack);
+                new_stack -= strlen(token);
+                newSize = strlen(token);
+              //printf("token size new'%d'\n", newSize);
+              //printf("newstack'%d'\n", new_stack);
+
+              memcpy(new_stack, token, newSize);
+              argv[argc] = new_stack;
+              //printf("argv[argc]:'%d'\n", argv[argc]);
+              argc++;
+              if (argc == 32) {
+                  break;
+              }
+          }
+          //puts a uint8_t time on the stack
+         argv[argc] = NULL;
+         int currSize = sizeof(time);
+          new_stack -= currSize;
+          printf("SIZE RIN %d'\n", currSize);
+        memcpy(new_stack, &argv[argc], currSize); //hur ska det se ut på stacken?
+        //om nedan är word-align varför behövs då denna? ska detta läggas in under word align while loopen??
+
+          //word-align
+         while((int)new_stack % 4 != 0){
+              new_stack--; //round the stack pointer down until it is a multiple of 4, dvs är delbart med 4...
+              printf("newstack'%d'\n", new_stack);
+          }
+
+        //puts char pointers on the stack, of which first is NULL 0
+          for(int i=argc; i>=0; i--){
+             curr = argv[i];
+              int size = sizeof(curr);
+              new_stack -= size;
+              memcpy(new_stack, &curr, size); //vill lägga till pekare inte sjävla strängen
+              argv[i+1] =  new_stack;
+              argvcurr = argv[i+1];
+          }
+            //puts a char** on the stack
+          int size = sizeof(argvcurr);
+          new_stack -= size;
+          memcpy(new_stack, &argvcurr, size);
+
+         //puts argc on the stack
+          size = sizeof(argc);
+          new_stack -= size;
+          memcpy(new_stack, &argc, size);
+
+          //puts fake return address void on the stack
+          size = sizeof(fake_return);
+          new_stack -= size;
+          memcpy(new_stack, &fake_return, size);
+
+          //FRÅGOR: hur ska vi fixa word align??? så att en nolla läggs på stacken
+          //hur fixar vi en void pointer i slutet så att det inte blir page fault????
+          //Var kommer Sn ifrån som ligger på stacken i kernel space? så ser det ej ut i labbexemplet
+
+
+          *esp = new_stack;
+      }
+
+        else
         palloc_free_page (kpage);
     }
   return success;
