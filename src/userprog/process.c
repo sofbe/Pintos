@@ -547,53 +547,40 @@ setup_stack (void **esp, char *file_name)
           char *save_ptr;
           void *new_stack = *esp;
           int argc = 0;
-          uint8_t time = NULL;
           size_t newSize = 0;
+          int size = 0;
           char **curr;
           char ***argvcurr;
           void *fake_return = NULL;
 
           for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
-            //  printf("'%s'\n", token);
-            //  printf("newstack init'%d'\n", new_stack);
-                new_stack -= strlen(token);
-                newSize = strlen(token);
-              //printf("token size new'%d'\n", newSize);
-              //printf("newstack'%d'\n", new_stack);
-
+            newSize = strlen(token)+1;
+            new_stack -= newSize;
               memcpy(new_stack, token, newSize);
               argv[argc] = new_stack;
-              //printf("argv[argc]:'%d'\n", argv[argc]);
               argc++;
               if (argc == 32) {
                   break;
               }
           }
-          //puts a uint8_t time on the stack
-         argv[argc] = NULL;
-         int currSize = sizeof(time);
-          new_stack -= currSize;
-          printf("SIZE RIN %d'\n", currSize);
-        memcpy(new_stack, &argv[argc], currSize); //hur ska det se ut på stacken?
-        //om nedan är word-align varför behövs då denna? ska detta läggas in under word align while loopen??
 
-          //word-align
          while((int)new_stack % 4 != 0){
               new_stack--; //round the stack pointer down until it is a multiple of 4, dvs är delbart med 4...
               printf("newstack'%d'\n", new_stack);
           }
 
         //puts char pointers on the stack, of which first is NULL 0
+          argv[argc] = NULL;
           for(int i=argc; i>=0; i--){
              curr = argv[i];
-              int size = sizeof(curr);
+             size = sizeof(curr);
               new_stack -= size;
-              memcpy(new_stack, &curr, size); //vill lägga till pekare inte sjävla strängen
+              memcpy(new_stack, &curr, size);
               argv[i+1] =  new_stack;
               argvcurr = argv[i+1];
           }
             //puts a char** on the stack
-          int size = sizeof(argvcurr);
+            size = sizeof(argvcurr);
           new_stack -= size;
           memcpy(new_stack, &argvcurr, size);
 
@@ -607,11 +594,7 @@ setup_stack (void **esp, char *file_name)
           new_stack -= size;
           memcpy(new_stack, &fake_return, size);
 
-          //FRÅGOR: hur ska vi fixa word align??? så att en nolla läggs på stacken
-          //hur fixar vi en void pointer i slutet så att det inte blir page fault????
-          //Var kommer Sn ifrån som ligger på stacken i kernel space? så ser det ej ut i labbexemplet
-
-
+         //put the new stack back to esp.
           *esp = new_stack;
       }
 
