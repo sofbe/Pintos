@@ -557,8 +557,7 @@ setup_stack (void **esp, char *file_name)
             newSize = strlen(token)+1;
             new_stack -= newSize;
               memcpy(new_stack, token, newSize);
-              argv[argc] = new_stack;
-              argc++;
+              argv[argc++] = new_stack;
               if (argc == 32) {
                   break;
               }
@@ -566,7 +565,6 @@ setup_stack (void **esp, char *file_name)
 
          while((int)new_stack % 4 != 0){
               new_stack--; //round the stack pointer down until it is a multiple of 4, dvs är delbart med 4...
-              printf("newstack'%d'\n", new_stack);
           }
 
         //puts char pointers on the stack, of which first is NULL 0
