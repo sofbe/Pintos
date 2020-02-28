@@ -99,6 +99,7 @@ struct thread
     struct list children_list;
 
 
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -112,8 +113,10 @@ struct thread
 
 #ifdef USERPROG
 struct parent_child{
+    int wait_status;
     int exit_status;
     int alive_count;
+    tid_t id;
     struct semaphore s;
     struct lock l;
     char *fn_copyInfo;

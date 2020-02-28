@@ -52,13 +52,14 @@ int open(const char *file){
 }
 
 void close(int fd){
-    ASSERT(fd > -1 && fd < 130);
+    if(fd > -1 && fd < 130) {
+        struct thread *thread = thread_current();
+        struct file *file = thread->fds[fd];
 
-    struct thread *thread = thread_current();
-    struct file *file = thread->fds[fd];
+        file_close(file);
+        thread->fds[fd] = NULL;
+    }
 
-    file_close(file);
-    thread->fds[fd] = NULL;
 }
 
 int read(int fd, void *buffer, unsigned size){
@@ -91,21 +92,26 @@ int read(int fd, void *buffer, unsigned size){
 int write(int fd, const void *buffer, unsigned size){
     struct thread *thread = thread_current();
 
-    ASSERT(fd > -1 && fd < 130);
+    if(fd > -1 && fd < 130) {
 
-    int bytes;
+        int bytes;
 
-    if (fd == STDOUT_FILENO) {
-        putbuf(buffer, size);
-        return size;
-    } else if (fd > STDOUT_FILENO) {
-        if(thread->fds[fd] != NULL) {
-            bytes = file_write(thread->fds[fd], buffer, size);
-            return bytes;
+        if (fd == STDOUT_FILENO) {
+            putbuf(buffer, size);
+            return size;
+        } else if (fd > STDOUT_FILENO) {
+            if (thread->fds[fd] != NULL) {
+                bytes = file_write(thread->fds[fd], buffer, size);
+                return bytes;
+            }
+        } else {
+            return -1;
         }
-    } else {
+    }
+    else {
         return -1;
     }
+
 
 }
 
@@ -125,6 +131,11 @@ pid_t exec (const char *cmd_file) {
     return pid;
 
 }
+
+int wait(pid_t pid){
+    return process_wait(pid);
+}
+
 
 static void
 syscall_handler (struct intr_frame *f UNUSED)
@@ -154,6 +165,7 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         }
         case (SYS_WRITE): {
+
             (f->eax) = write(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
             break;
         }
@@ -165,7 +177,12 @@ syscall_handler (struct intr_frame *f UNUSED)
             (f->eax) = exec(*((char**)(f->esp+4)));
             break;
         }
+        case (SYS_WAIT): {
+            (f->eax) = wait(*((int*)(f->esp+4)));
+            break;
+        }
     }
 
     //thread_exit ();
 }
+

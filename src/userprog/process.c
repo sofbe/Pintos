@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <thread.h>
-//#include <thread.h>
-//#include <synch.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -66,6 +63,7 @@ process_execute (const char *file_name)
   }
   else{
       list_push_back(&(parent->children_list), &(pc->child_elem));
+      pc->id = tid;
       return tid;
     }
 }
@@ -118,10 +116,40 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-    while(true){
+    struct thread *thread = thread_current();
 
-    }
-  return -1;
+        int exit_status;
+        struct list_elem *e;
+        for (e = list_begin(&(thread->children_list)); e != list_end(&(thread->children_list));) {
+            struct parent_child *currentPc = list_entry(e, struct parent_child, child_elem);
+            if (currentPc->id == child_tid){
+               // if(currentPc->wait_status == 0){
+                    lock_acquire(&(currentPc->l));
+                    if(currentPc->alive_count != 1){
+                        lock_release(&(currentPc->l));
+                        sema_down(&currentPc->s);
+                        currentPc->wait_status = 1;
+                        exit_status = currentPc->exit_status;
+                        break;
+                    }
+                    else{
+                        lock_release(&(currentPc->l));
+                        exit_status = currentPc->exit_status;
+                        break;
+                    }
+                //}
+                /*else{
+                    exit_status = -1;
+                    break;
+                }*/
+            }
+            else{
+                e = list_next(e);
+            }
+
+        }
+
+  return exit_status;
 }
 
 /* Free the current process's resources. */
@@ -158,6 +186,7 @@ process_exit (void) {
         }
         else{
             lock_release(&pc->l);
+            sema_up(&pc->l);
         }
     }
 
@@ -293,7 +322,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
    /* Uncomment the following line to print some debug
      information. This will be useful when you debug the program
      stack.*/
-#define STACK_DEBUG
+// #define STACK_DEBUG
 
 #ifdef STACK_DEBUG
   printf("*esp is %p\nstack contents:\n", *esp);
