@@ -47,9 +47,11 @@ process_execute (const char *file_name)
   pc->alive_count = 2;
   pc->fn_copyInfo = fn_copy;
   pc->success = true;
+  pc->exit_status = -1;
 
   sema_init(&(pc->s), 0);
   lock_init(&pc->l);
+
   tid = thread_create (file_name, PRI_DEFAULT, start_process, pc);
     sema_down(&(pc->s));
 
@@ -118,35 +120,25 @@ process_wait (tid_t child_tid UNUSED)
 {
     struct thread *thread = thread_current();
 
-        int exit_status;
+        int exit_status = -1;
         struct list_elem *e;
-        for (e = list_begin(&(thread->children_list)); e != list_end(&(thread->children_list));) {
+        for (e = list_begin(&(thread->children_list)); e != list_end(&(thread->children_list));e = list_next(e)) {
             struct parent_child *currentPc = list_entry(e, struct parent_child, child_elem);
-            if (currentPc->id == child_tid){
-               // if(currentPc->wait_status == 0){
+            if (currentPc->id == child_tid && (currentPc->waiting == false)){
+
                     lock_acquire(&(currentPc->l));
                     if(currentPc->alive_count != 1){
                         lock_release(&(currentPc->l));
                         sema_down(&currentPc->s);
-                        currentPc->wait_status = 1;
                         exit_status = currentPc->exit_status;
-                        break;
                     }
                     else{
                         lock_release(&(currentPc->l));
                         exit_status = currentPc->exit_status;
-                        break;
                     }
-                //}
-                /*else{
-                    exit_status = -1;
-                    break;
-                }*/
+                currentPc->waiting =true;
+                break;
             }
-            else{
-                e = list_next(e);
-            }
-
         }
 
   return exit_status;
@@ -186,7 +178,7 @@ process_exit (void) {
         }
         else{
             lock_release(&pc->l);
-            sema_up(&pc->l);
+            sema_up(&pc->s);
         }
     }
 
@@ -194,8 +186,8 @@ process_exit (void) {
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = thread->pagedir;
-  if (pd != NULL) 
-    {
+  if (pd != NULL) {
+
       /* Correct ordering here is crucial.  We must set
          cur->pagedir to NULL before switching page directories,
          so that a timer interrupt can't switch back to the
@@ -595,7 +587,6 @@ setup_stack (void **esp, char *file_name)
 
          while((int)new_stack % 4 != 0){
               new_stack--; //round the stack pointer down until it is a multiple of 4, dvs är delbart med 4...
-              printf("newstack'%d'\n", new_stack);
           }
 
         //puts char pointers on the stack, of which first is NULL 0

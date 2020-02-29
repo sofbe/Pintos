@@ -122,6 +122,7 @@ struct parent_child{
     char *fn_copyInfo;
     bool success;
     struct list_elem child_elem;
+    bool waiting;
 };
 
 #endif
