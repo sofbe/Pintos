@@ -32,6 +32,8 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *fn_new;
+  char *save_ptr;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -41,9 +43,17 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+    fn_new = palloc_get_page (0);
+    if (fn_new == NULL)
+        return TID_ERROR;
+    strlcpy (fn_new, file_name, PGSIZE);
+    char *fn_name = strtok_r(fn_new, " ", &save_ptr);
+
+
   /* Create a new thread to execute FILE_NAME. */
   struct thread *parent = thread_current();
   struct parent_child *pc = ((struct parent_child*)malloc(sizeof(struct parent_child)));
+  pc->file_n = fn_name;
   pc->alive_count = 2;
   pc->fn_copyInfo = fn_copy;
   pc->success = true;
@@ -52,7 +62,7 @@ process_execute (const char *file_name)
   sema_init(&(pc->s), 0);
   lock_init(&pc->l);
 
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, pc);
+  tid = thread_create (fn_name, PRI_DEFAULT, start_process, pc);
     sema_down(&(pc->s));
 
   if (tid == TID_ERROR) {
@@ -125,7 +135,6 @@ process_wait (tid_t child_tid UNUSED)
         for (e = list_begin(&(thread->children_list)); e != list_end(&(thread->children_list));e = list_next(e)) {
             struct parent_child *currentPc = list_entry(e, struct parent_child, child_elem);
             if (currentPc->id == child_tid && (currentPc->waiting == false)){
-
                     lock_acquire(&(currentPc->l));
                     if(currentPc->alive_count != 1){
                         lock_release(&(currentPc->l));

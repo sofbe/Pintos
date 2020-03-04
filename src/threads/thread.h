@@ -120,6 +120,7 @@ struct parent_child{
     struct semaphore s;
     struct lock l;
     char *fn_copyInfo;
+    char file_n;
     bool success;
     struct list_elem child_elem;
     bool waiting;
