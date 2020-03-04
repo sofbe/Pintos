@@ -152,6 +152,40 @@ int wait(pid_t pid){
     return process_wait(pid);
 }
 
+void seek (int fd, unsigned position){
+    if(!(fd > -1 && fd < 130)) {
+        exit(-1);
+    }
+    struct thread *thread = thread_current();
+    struct file *f = thread->fds[fd];
+    file_seek(f, position);
+}
+
+unsigned tell (int fd){
+    if(!(fd > -1 && fd < 130)) {
+        exit(-1);
+    }
+    struct thread *thread = thread_current();
+    struct file *f = thread->fds[fd];
+    return file_tell(f);
+}
+
+int filesize (int fd){
+    if(!(fd > -1 && fd < 130)) {
+        exit(-1);
+    }
+    struct thread *thread = thread_current();
+    struct file *f = thread->fds[fd];
+    return file_length(f);
+}
+
+bool remove (const char *file_name){
+    if(!valid_char(file_name)){
+        exit(-1);
+    }
+    return filesys_remove(file_name);
+}
+
 bool valid_pointer(void *pointer){
     struct thread *thread = thread_current();
 
@@ -223,7 +257,6 @@ syscall_handler (struct intr_frame *f UNUSED)
                 else{
                     exit(*((int*)(f->esp+4)));
                 }
-
                 break;
             }
             case (SYS_CLOSE):{
@@ -244,6 +277,22 @@ syscall_handler (struct intr_frame *f UNUSED)
             }
             case (SYS_WAIT): {
                 (f->eax) = wait(*((int*)(f->esp+4)));
+                break;
+            }
+            case(SYS_SEEK): {
+                (f->eax) = seek(*((int*)(f->esp+4)),*((unsigned*)(f->esp+8)));
+                break;
+            }
+            case(SYS_TELL): {
+                (f->eax) = tell(*((int*)(f->esp+4)));
+                break;
+            }
+            case(SYS_FILESIZE): {
+                (f->eax) = filesize(*((int*)(f->esp+4)));
+                break;
+            }
+            case(SYS_REMOVE): {
+                (f->eax) = remove(*((char**)(f->esp+4)));
                 break;
             }
         }
