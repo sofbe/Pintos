@@ -152,15 +152,16 @@ int wait(pid_t pid){
     return process_wait(pid);
 }
 
+
 bool valid_pointer(void *pointer){
     struct thread *thread = thread_current();
 
-    if(pointer != NULL && pointer < PHYS_BASE){
+    if(pointer != NULL ){
         if(is_user_vaddr(pointer)){
             if(pagedir_get_page(thread->pagedir, pointer) != NULL){
                 return true;
+            }
         }
-    }
 
     }
     return false;
@@ -204,50 +205,71 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 
     switch (sys_nr) {
-            case (SYS_HALT): {
-                halt();
-                break;
-            }
-            case (SYS_CREATE): {
-                (f->eax) = create(*((char**)(f->esp+4)), *((int*)(f->esp+8)));
-                break;
-            }
-            case (SYS_OPEN): {
-                (f->eax) = open(*((char**)(f->esp+4)));
-                break;
-            }
-            case (SYS_EXIT): {
-                if(!valid_pointer(f->esp+4)){
-                    exit(-1);
-                }
-                else{
-                    exit(*((int*)(f->esp+4)));
-                }
-
-                break;
-            }
-            case (SYS_CLOSE):{
-                close(*((int*)(f->esp+4)));
-                break;
-            }
-            case (SYS_WRITE): {
-                (f->eax) = write(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
-                break;
-            }
-            case (SYS_READ): {
-                (f->eax) = read(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
-                break;
-            }
-            case (SYS_EXEC): {
-                (f->eax) = exec(*((char**)(f->esp+4)));
-                break;
-            }
-            case (SYS_WAIT): {
-                (f->eax) = wait(*((int*)(f->esp+4)));
-                break;
-            }
+        case (SYS_HALT): {
+            halt();
+            break;
         }
-     //}
+        case (SYS_CREATE): {
+            if(!valid_pointer(f->esp+4) && !valid_pointer(f->esp+8)){
+                exit(-1);
+            }
+            (f->eax) = create(*((char**)(f->esp+4)), *((int*)(f->esp+8)));
+            break;
+        }
+        case (SYS_OPEN): {
+            if(!valid_pointer(f->esp+4)){
+                exit(-1);
+            }
+            (f->eax) = open(*((char**)(f->esp+4)));
+            break;
+        }
+        case (SYS_EXIT): {
+            if(!valid_pointer(f->esp+4)){
+                exit(-1);
+            }
+            else{
+                exit(*((int*)(f->esp+4)));
+            }
+            break;
+        }
+        case (SYS_CLOSE):{
+            if(!valid_pointer(f->esp+4)){
+                exit(-1);
+            }
+            close(*((int*)(f->esp+4)));
+            break;
+        }
+        case (SYS_WRITE): {
+            if(!valid_pointer(f->esp+4) && !valid_pointer(f->esp+8) && !valid_pointer(f->esp+12)){
+                exit(-1);
+            }
+            (f->eax) = write(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
+            break;
+        }
+        case (SYS_READ): {
+            if(!valid_pointer(f->esp+4) && !valid_pointer(f->esp+8) && !valid_pointer(f->esp+12)){
+                exit(-1);
+            }
+            (f->eax) = read(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
+            break;
+        }
+        case (SYS_EXEC): {
+            if(!valid_pointer(f->esp+4)){
+                exit(-1);
+            }
+            (f->eax) = exec(*((char**)(f->esp+4)));
+            break;
+        }
+        case (SYS_WAIT): {
+            if(!valid_pointer(f->esp+4)){
+                exit(-1);
+            }
+            (f->eax) = wait(*((int*)(f->esp+4)));
+            break;
+        }
+
+    }
+    //}
 
     //thread_exit ();
 }
