@@ -280,7 +280,7 @@ syscall_handler (struct intr_frame *f UNUSED)
                 break;
             }
             case(SYS_SEEK): {
-                (f->eax) = seek(*((int*)(f->esp+4)),*((unsigned*)(f->esp+8)));
+               seek(*((int*)(f->esp+4)),*((unsigned*)(f->esp+8)));
                 break;
             }
             case(SYS_TELL): {

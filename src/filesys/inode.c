@@ -6,6 +6,8 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
+
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -37,8 +39,10 @@ struct inode
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;             /* Inode content. */
-    struct semaphore *s;
-  };
+    struct semaphore reading;
+    struct semaphore writing;
+    int current_reading;
+};
 
 /* Returns the disk sector that contains byte offset POS within
    INODE.
@@ -57,12 +61,14 @@ byte_to_sector (const struct inode *inode, off_t pos)
 /* List of open inodes, so that opening a single inode twice
    returns the same `struct inode'. */
 static struct list open_inodes;
+struct lock l;
 
 /* Initializes the inode module. */
 void
 inode_init (void) 
 {
   list_init (&open_inodes);
+  lock_init(&l);
 }
 
 /* Initializes an inode with LENGTH bytes of data and
@@ -73,6 +79,7 @@ inode_init (void)
 bool
 inode_create (disk_sector_t sector, off_t length)
 {
+    //lock_aqcuire(&l);
   struct inode_disk *disk_inode = NULL;
   bool success = false;
 
@@ -103,6 +110,7 @@ inode_create (disk_sector_t sector, off_t length)
         } 
       free (disk_inode);
     }
+  //lock_release(&l);
   return success;
 }
 
@@ -112,6 +120,7 @@ inode_create (disk_sector_t sector, off_t length)
 struct inode *
 inode_open (disk_sector_t sector) 
 {
+    lock_acquire(&l);
   struct list_elem *e;
   struct inode *inode;
 
@@ -123,23 +132,31 @@ inode_open (disk_sector_t sector)
       if (inode->sector == sector) 
         {
           inode_reopen (inode);
-          return inode; 
+            lock_release(&l);
+
+            return inode;
         }
     }
 
   /* Allocate memory. */
   inode = malloc (sizeof *inode);
-  if (inode == NULL)
-    return NULL;
-
+  if (inode == NULL) {
+      lock_release(&l);
+      return NULL;
+  }
   /* Initialize. */
   list_push_front (&open_inodes, &inode->elem);
   inode->sector = sector;
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-  disk_read (filesys_disk, inode->sector, &inode->data);
-  return inode;
+
+  sema_init(&inode->reading, 1);
+    sema_init(&inode->writing, 1);
+    inode->current_reading = 0;
+    disk_read (filesys_disk, inode->sector, &inode->data);
+    lock_release(&l);
+    return inode;
 }
 
 /* Reopens and returns INODE. */
@@ -167,10 +184,13 @@ inode_get_inumber (const struct inode *inode)
 void
 inode_close (struct inode *inode) 
 {
-  /* Ignore null pointer. */
-  if (inode == NULL)
-    return;
+    lock_acquire(&l);
 
+    /* Ignore null pointer. */
+  if (inode == NULL) {
+      lock_release(&l);
+      return;
+  }
   /* Release resources if this was the last opener. */
   if (--inode->open_cnt == 0)
     {
@@ -187,6 +207,8 @@ inode_close (struct inode *inode)
 
       free (inode); 
     }
+    lock_release(&l);
+
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
@@ -204,6 +226,14 @@ inode_remove (struct inode *inode)
 off_t
 inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset) 
 {
+
+    sema_down(&inode->reading);
+    inode->current_reading++;
+    if(inode->current_reading == 1){
+        sema_down(&inode->writing);
+    }
+
+    sema_up(&inode->reading);
   uint8_t *buffer = buffer_;
   off_t bytes_read = 0;
   uint8_t *bounce = NULL;
@@ -250,6 +280,14 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
     }
   free (bounce);
 
+    sema_down(&inode->reading);
+    inode->current_reading--;
+    if(inode->current_reading == 0){
+        sema_up(&inode->writing);
+    }
+
+    sema_up(&inode->reading);
+
   return bytes_read;
 }
 
@@ -262,13 +300,18 @@ off_t
 inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                 off_t offset) 
 {
-  const uint8_t *buffer = buffer_;
+    sema_down(&inode->reading);
+    sema_down(&inode->writing);
+
+    const uint8_t *buffer = buffer_;
   off_t bytes_written = 0;
   uint8_t *bounce = NULL;
 
-  if (inode->deny_write_cnt)
-    return 0;
-
+  if (inode->deny_write_cnt) {
+      sema_up(&inode->writing);
+      sema_up(&inode->reading);
+      return 0;
+  }
   while (size > 0) 
     {
       /* Sector to write, starting byte offset within sector. */
@@ -317,7 +360,8 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       bytes_written += chunk_size;
     }
   free (bounce);
-
+    sema_up(&inode->writing);
+    sema_up(&inode->reading);
   return bytes_written;
 }
 
