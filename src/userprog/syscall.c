@@ -169,9 +169,9 @@ bool valid_pointer(void *pointer){
 }
 
 bool valid_char(char *c){
-    /*if(!valid_pointer(c)){
+    if(!valid_pointer(c)){
         return false;
-    }*/
+    }
     while(*(c) != '\0'){
         if(!valid_pointer(c)){
             return false;
@@ -182,9 +182,9 @@ bool valid_char(char *c){
 }
 
 bool valid_buffer(void *buffer, unsigned size){
-    /*if(!valid_pointer(buffer)){
+    if(!valid_pointer(buffer)){
         return false;
-    }*/
+    }
     unsigned current = buffer;
     while(current < (buffer+size)){
         if(!valid_pointer(current)){
