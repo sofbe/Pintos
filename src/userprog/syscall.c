@@ -169,9 +169,9 @@ bool valid_pointer(void *pointer){
 }
 
 bool valid_char(char *c){
-    if(!valid_pointer(c)){
+    /*if(!valid_pointer(c)){
         return false;
-    }
+    }*/
     while(*(c) != '\0'){
         if(!valid_pointer(c)){
             return false;
@@ -182,9 +182,9 @@ bool valid_char(char *c){
 }
 
 bool valid_buffer(void *buffer, unsigned size){
-    if(!valid_pointer(buffer)){
+    /*if(!valid_pointer(buffer)){
         return false;
-    }
+    }*/
     unsigned current = buffer;
     while(current < (buffer+size)){
         if(!valid_pointer(current)){
@@ -210,7 +210,7 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         }
         case (SYS_CREATE): {
-            if(!valid_pointer(f->esp+4) && !valid_pointer(f->esp+8)){
+            if(!valid_pointer(f->esp+4) || !valid_pointer(f->esp+8)){
                 exit(-1);
             }
             (f->eax) = create(*((char**)(f->esp+4)), *((int*)(f->esp+8)));
@@ -240,14 +240,14 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         }
         case (SYS_WRITE): {
-            if(!valid_pointer(f->esp+4) && !valid_pointer(f->esp+8) && !valid_pointer(f->esp+12)){
+            if(!valid_pointer(f->esp+4) || !valid_pointer(f->esp+8) || !valid_pointer(f->esp+12)){
                 exit(-1);
             }
             (f->eax) = write(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
             break;
         }
         case (SYS_READ): {
-            if(!valid_pointer(f->esp+4) && !valid_pointer(f->esp+8) && !valid_pointer(f->esp+12)){
+            if(!valid_pointer(f->esp+4) || !valid_pointer(f->esp+8) || !valid_pointer(f->esp+12)){
                 exit(-1);
             }
             (f->eax) = read(*((int*)(f->esp+4)), *((void**)(f->esp+8)), *((unsigned*)(f->esp+12)));
