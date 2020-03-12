@@ -156,13 +156,14 @@ void seek (int fd, unsigned position){
     if((fd > -1 && fd < 130)) {
         struct thread *thread = thread_current();
         struct file *f = thread->fds[fd];
-        if(filesize(fd) < position){
+        if(f != NULL){
+            if(filesize(fd) < position){
             file_seek(f, filesize(fd));
+            }
+            else{
+                file_seek(f, position);
+            }
         }
-        else{
-            file_seek(f, position);
-        }
-
     }
 }
 
@@ -172,7 +173,10 @@ unsigned tell (int fd){
     }
     struct thread *thread = thread_current();
     struct file *f = thread->fds[fd];
-    return file_tell(f);
+    if(f != NULL){
+        return file_tell(f);
+    }
+    return -1;
 }
 
 int filesize (int fd){
