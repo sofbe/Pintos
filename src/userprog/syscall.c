@@ -153,17 +153,22 @@ int wait(pid_t pid){
 }
 
 void seek (int fd, unsigned position){
-    if(!(fd > -1 && fd < 130)) {
-        exit(-1);
+    if((fd > -1 && fd < 130)) {
+        struct thread *thread = thread_current();
+        struct file *f = thread->fds[fd];
+        if(filesize(fd) < position){
+            file_seek(f, filesize(fd));
+        }
+        else{
+            file_seek(f, position);
+        }
+
     }
-    struct thread *thread = thread_current();
-    struct file *f = thread->fds[fd];
-    file_seek(f, position);
 }
 
 unsigned tell (int fd){
     if(!(fd > -1 && fd < 130)) {
-        exit(-1);
+        return -1;
     }
     struct thread *thread = thread_current();
     struct file *f = thread->fds[fd];
@@ -172,11 +177,16 @@ unsigned tell (int fd){
 
 int filesize (int fd){
     if(!(fd > -1 && fd < 130)) {
-        exit(-1);
+        return -1;
     }
     struct thread *thread = thread_current();
     struct file *f = thread->fds[fd];
-    return file_length(f);
+    if(f != NULL) {
+        return file_length(f);
+    }
+    else{
+        return -1;
+    }
 }
 
 bool remove (const char *file_name){
