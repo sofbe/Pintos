@@ -1,4 +1,5 @@
 #ifndef __LIB_CTYPE_H
+
 #define __LIB_CTYPE_H
 
 static inline int islower (int c) { return c >= 'a' && c <= 'z'; }
